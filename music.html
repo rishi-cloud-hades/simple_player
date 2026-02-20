@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>simple Music Player</title>
+    <style>
+        :root {
+            --primary: #ff4757;
+            --glass: rgba(255, 255, 255, 0.15);
+            --text: #ffffff;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+
+        body {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(45deg, #2f3542, #2ed573);
+            animation-name: mycolor;
+            animation-play-state: running;
+            animation-delay: 0s;
+            animation-iteration-count: infinite;
+            animation-duration: 10s;
+            animation-timing-function: linear;
+        }
+        @keyframes mycolor {
+    20%{background: #833AB4;
+background: linear-gradient(90deg, rgba(131, 58, 180, 1) 0%, rgba(253, 29, 29, 1) 50%, rgba(252, 176, 69, 1) 100%);}
+    40%{background: #EEAECA;
+background: radial-gradient(circle, rgba(238, 174, 202, 1) 0%, rgba(148, 187, 233, 1) 100%);}
+    100%{background: #020024;
+background: linear-gradient(90deg, rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%);}
+    80%{background: #3F5EFB;
+background: radial-gradient(circle, rgba(63, 94, 251, 1) 0%, rgba(252, 70, 107, 1) 100%);}
+    40%{background: #22C1C3;
+background: linear-gradient(0deg, rgba(34, 193, 195, 1) 0%, rgba(253, 187, 45, 1) 100%);}
+}
+       
+
+        /* Player Card */
+        .player {
+            width: 350px;
+            background: var(--glass);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 25px;
+            border-radius: 30px;
+            box-shadow: 0 25px 45px rgba(0,0,0,0.2);
+            color: var(--text);
+            text-align: center;
+        }
+
+        .img-area {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            border: 5px solid var(--glass);
+        }
+
+        .img-area img { width: 100%; height: 100%; object-fit: cover; }
+
+        .song-details #name { font-size: 1.5rem; font-weight: 600; }
+        .song-details #artist { font-size: 0.9rem; opacity: 0.8; margin-top: 5px; }
+
+        /* Progress Bar */
+        .progress-area {
+            height: 6px;
+            width: 100%;
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+            margin: 30px 0 10px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .progress-bar {
+            height: inherit;
+            width: 0%;
+            background: var(--primary);
+            border-radius: inherit;
+            position: relative;
+        }
+
+        .progress-bar::before {
+            content: "";
+            position: absolute;
+            height: 12px; width: 12px;
+            background: #fff;
+            right: -6px; top: 50%;
+            transform: translateY(-50%);
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .progress-area:hover .progress-bar::before { opacity: 1; }
+
+        .timer {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-bottom: 20px;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .controls button {
+            background: none; border: none; color: #fff;
+            cursor: pointer; font-size: 1.2rem; transition: 0.3s;
+        }
+
+        .controls button:hover { color: var(--primary); }
+
+        #play-pause {
+            width: 55px; height: 55px;
+            background: var(--primary);
+            border-radius: 50%;
+            font-size: 1.5rem;
+        }
+
+        .active-btn { color: var(--primary) !important; text-shadow: 0 0 10px var(--primary); }
+
+        /* Volume */
+        .volume-container {
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="range"] { cursor: pointer; accent-color: var(--primary); flex: 1; }
+    </style>
+</head>
+<body>
+
+    <div class="player">
+        <div class="img-area">
+            <img id="track-img" src="https://picsum.photos/200/200" alt="Album Art">
+        </div>
+        
+        <div class="song-details">
+            <p id="name">Select a track</p>
+            <p id="artist">Artist</p>
+        </div>
+
+        <div class="progress-area">
+            <div class="progress-bar"></div>
+        </div>
+        <div class="timer">
+            <span class="current">0:00</span>
+            <span class="duration">0:00</span>
+        </div>
+
+        <div class="controls">
+            <button id="shuffle" title="Shuffle">🔀</button>
+            <button id="prev">⏮</button>
+            <button id="play-pause">▶</button>
+            <button id="next">⏭</button>
+            <button id="loop" title="Loop">🔁</button>
+        </div>
+
+        <div class="volume-container">
+            <span>🔈</span>
+            <input type="range" id="volume" min="0" max="1" step="0.1" value="0.5">
+            <span>🔊</span>
+        </div>    <audio id="main-audio"></audio>
+
+    </div>
+
+
+    <script>
+        const container = document.querySelector(".player"),
+         mainAudio = container.querySelector("#main-audio"),
+         playPauseBtn = container.querySelector("#play-pause"),
+         prevBtn = container.querySelector("#prev"),
+         nextBtn = container.querySelector("#next"),
+         progressBar = container.querySelector(".progress-bar"),
+         progressArea = container.querySelector(".progress-area"),
+         shuffleBtn = container.querySelector("#shuffle"),
+         loopBtn = container.querySelector("#loop"),
+         volumeSlider = container.querySelector("#volume");
+
+        // Playlist Array
+        let allMusic = [
+        { name: "23 Theme", artist: "Anirudh", img: "", src: "media/23 Theme.mp3" },
+            { name: "Putta Bomma", artist: "Thaman", img: "", src: "media/Putta Bomma.mp3" },
+            { name: "Machi-Open-The-Bottle", artist: "Yuvan Shankar raja,Mano", img: "", src: "media/Machi-Open-The-Bottle.mp3" },
+            { name: "Kalyani", artist: "Unknown", img: "", src: "media/Kalyani.mp3" },
+            { name: "Ennamo Yeadho", artist: "Harris Jayaraj", img: "", src: "media/Ennamo Yeadho.mp3" },
+            { name: "jimikki Ponnu", artist: "Anirudh,Jonita Gandhi", img: "", src: "media/Jimikki-ponnu.mp3" },
+
+        ];
+
+        let musicIndex = 0;
+        let isShuffle = false;
+        let isLoop = false;
+
+        window.addEventListener("load", () => {
+            loadMusic(musicIndex);
+        });
+
+        function loadMusic(index){
+            container.querySelector("#name").innerText = allMusic[index].name;
+            container.querySelector("#artist").innerText = allMusic[index].artist;
+            container.querySelector("#track-img").src = allMusic[index].img;
+            mainAudio.src = allMusic[index].src;
+        }
+
+        function playMusic(){
+            container.classList.add("paused");
+            playPauseBtn.innerText = "⏸";
+            mainAudio.play();
+        }
+
+        function pauseMusic(){
+            container.classList.remove("paused");
+            playPauseBtn.innerText = "▶";
+            mainAudio.pause();
+        }
+
+        playPauseBtn.addEventListener("click", () => {
+            const isMusicPaused = container.classList.contains("paused");
+            isMusicPaused ? pauseMusic() : playMusic();
+        });
+
+        nextBtn.addEventListener("click", () => {
+            if(isShuffle) {
+                let randIndex = Math.floor(Math.random() * allMusic.length);
+                musicIndex = randIndex;
+            } else {
+                musicIndex = (musicIndex + 1) % allMusic.length;
+            }
+            loadMusic(musicIndex);
+            playMusic();
+        });
+
+        prevBtn.addEventListener("click", () => {
+            musicIndex = (musicIndex - 1 + allMusic.length) % allMusic.length;
+            loadMusic(musicIndex);
+            playMusic();
+        });
+
+        // Update progress bar
+        mainAudio.addEventListener("timeupdate", (e) => {
+            const currentTime = e.target.currentTime;
+            const duration = e.target.duration;
+            let progressWidth = (currentTime / duration) * 100;
+            progressBar.style.width = `${progressWidth}%`;
+
+            let musicCurrentTime = container.querySelector(".current"),
+            musicDuration = container.querySelector(".duration");
+
+            mainAudio.addEventListener("loadeddata", () => {
+                let audioDuration = mainAudio.duration;
+                let totalMin = Math.floor(audioDuration / 60);
+                let totalSec = Math.floor(audioDuration % 60);
+                if(totalSec < 10) totalSec = `0${totalSec}`;
+                musicDuration.innerText = `${totalMin}:${totalSec}`;
+            });
+
+            let currentMin = Math.floor(currentTime / 60);
+            let currentSec = Math.floor(currentTime % 60);
+            if(currentSec < 10) currentSec = `0${currentSec}`;
+            musicCurrentTime.innerText = `${currentMin}:${currentSec}`;
+        });
+
+        // Seek music
+        progressArea.addEventListener("click", (e) => {
+            let progressWidthval = progressArea.clientWidth;
+            let clickedOffSetX = e.offsetX;
+            let songDuration = mainAudio.duration;
+            mainAudio.currentTime = (clickedOffSetX / progressWidthval) * songDuration;
+            playMusic();
+        });
+
+        // Shuffle & Loop Toggles
+        shuffleBtn.addEventListener("click", () => {
+            isShuffle = !isShuffle;
+            shuffleBtn.classList.toggle("active-btn", isShuffle);
+        });
+
+        loopBtn.addEventListener("click", () => {
+            isLoop = !isLoop;
+            loopBtn.classList.toggle("active-btn", isLoop);
+        });
+
+        // Auto-next when ended
+        mainAudio.addEventListener("ended", () => {
+            if(isLoop) {
+                mainAudio.currentTime = 0;
+                playMusic();
+            } else {
+                nextBtn.click();
+            }
+        });
+
+        // Volume control
+        volumeSlider.addEventListener("input", (e) => {
+            mainAudio.volume = e.target.value;
+        });
+    </script>
+</body>
+</html>
